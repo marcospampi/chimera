@@ -48,7 +48,7 @@ set(ASM_EXT S)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBUILD_DATE=\\\"${TODAY}\\\"")
 
 # No errors pls
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -pedantic -Wextra -masm=intel -Wold-style-cast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -pedantic -Wextra -masm=intel -Wold-style-cast -lssp")
 
 # Chimera
 #
@@ -59,8 +59,3 @@ include("src/chimera/chimera.cmake")
 #
 # This loads chimera.dll and anything in mods/
 include("src/monolith/monolith.cmake")
-
-# HAC Map Downloader
-#
-# We need this to download maps from the HAC2 / HaloNet repo
-include("src/hac_map_downloader/hac_map_downloader.cmake")

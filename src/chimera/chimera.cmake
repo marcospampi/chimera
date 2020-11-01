@@ -196,15 +196,10 @@ add_custom_command(
 
 target_include_directories(chimera
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/curl/include"
-    PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/zstd/include"
 )
 
 # Set the name
-target_link_libraries(chimera shlwapi hac_map_downloader ${CMAKE_CURRENT_SOURCE_DIR}/ext/curl/lib/libcurl.a ws2_32)
-
-# Target this
-target_include_directories(chimera PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ext/zstd/include)
+target_link_libraries(chimera shlwapi ws2_32)
 
 # This one isn't worth fixing
 set_source_files_properties(src/chimera/signature/hac/codefinder.cpp PROPERTIES COMPILE_FLAGS "-Wno-old-style-cast")

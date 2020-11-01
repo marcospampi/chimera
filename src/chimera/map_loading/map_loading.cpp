@@ -20,16 +20,11 @@
 #include "../config/ini.hpp"
 #include "../event/frame.hpp"
 #include "../event/map_load.hpp"
-#include "../../hac_map_downloader/hac_map_downloader.hpp"
 #include "../bookmark/bookmark.hpp"
 #include "../halo_data/multiplayer.hpp"
 #include "../fix/custom_edition_bridge/map_support.hpp"
 #include <chrono>
 
-namespace Invader::Compression {
-    std::size_t decompress_map_file(const char *input, const char *output);
-    std::size_t decompress_map_file(const char *input, std::byte *output, std::size_t output_size);
-}
 
 #define BYTES_TO_MiB(bytes) (bytes / 1024.0F / 1024.0F)
 
@@ -56,9 +51,7 @@ namespace Chimera {
     const char *latest_map_loaded_multiplayer = nullptr;
 
     extern "C" {
-        std::byte *on_map_load_multiplayer_fail;
         char16_t download_text_string[64] = {};
-        void on_map_load_multiplayer_asm() noexcept;
         void on_server_join_text_asm() noexcept;
     }
 
@@ -231,117 +224,9 @@ namespace Chimera {
             if(!do_not_reload) {
                 compressed_map_file_size = 0;
 
-                if(compressed) {
-                    // Get filesystem data
-                    struct stat64 s;
-                    stat64(new_path, &s);
-                    std::uint64_t mtime = s.st_mtime;
-
-                    char tmp_path[MAX_PATH] = {};
-
-                    if(ui_map) {
-                        compressed_ui_map_file_size = size_from_file(new_path);
-                    }
-                    else {
-                        compressed_map_file_size = size_from_file(new_path);
-                    }
-
-                    // See if we can find it
-                    std::size_t new_index = last_loaded_map + 1;
-                    if(new_index >= (sizeof(compressed_maps) / sizeof(*compressed_maps))) {
-                        new_index = 0;
-                    }
-
-                    if(!do_maps_in_ram) {
-                        for(auto &map : compressed_maps) {
-                            if(std::strcmp(map_name, map.map_name) == 0 && map.date_modified == mtime) {
-                                get_tmp_path(map, tmp_path);
-                                //console_output("Didn't need to decompress %s -> %s", new_path, tmp_path);
-                                last_loaded_map = &map - compressed_maps;
-                                if(map_path) {
-                                    std::strncpy(map_path, tmp_path, MAX_PATH);
-                                }
-                                return;
-                            }
-                        }
-                    }
-
-                    // Attempt to decompress
-                    auto &compressed_map_to_use = compressed_maps[new_index];
-                    get_tmp_path(compressed_maps[new_index], tmp_path);
-                    //std::printf("Trying to decompress %s @ %s -> %s...\n", map_name, new_path, tmp_path);
-                    auto start = std::chrono::steady_clock::now();
-
-                    // If we're doing maps in RAM, output directly to the region allowed
-                    if(do_maps_in_ram) {
-                        std::size_t offset;
-                        if(ui_map) {
-                            buffer_size = UI_SIZE;
-                            offset = UI_OFFSET;
-                        }
-                        else {
-                            buffer_size = UI_OFFSET;
-                            offset = 0;
-                        }
-
-                        buffer = maps_in_ram_region + offset;
-                        try {
-                            buffer_used = Invader::Compression::decompress_map_file(new_path, buffer, buffer_size);
-                        }
-                        catch (std::exception &) {
-                            char error_message[256];
-                            std::snprintf(error_message, sizeof(error_message), "Failed to load %s: Map is invalid, or not enough space is allocated to load this map", new_path);
-                            MessageBox(nullptr, error_message, "Decompression Error", MB_ICONERROR | MB_OK);
-                            std::exit(1);
-                            return;
-                        }
-
-                        if(ui_map) {
-                            ui_map_file_size = buffer_used;
-                        }
-                        else {
-                            map_file_size = buffer_used;
-                        }
-                    }
-
-                    // Otherwise do a map file
-                    else {
-                        try {
-                            Invader::Compression::decompress_map_file(new_path, tmp_path);
-                        }
-                        catch (std::exception &) {
-                            char error_message[256];
-                            std::snprintf(error_message, sizeof(error_message), "Failed to load %s: Map is invalid", new_path);
-                            MessageBox(nullptr, error_message, "Decompression Error", MB_ICONERROR | MB_OK);
-                            std::exit(1);
-                            return;
-                        }
-
-                        if(ui_map) {
-                            ui_map_file_size = size_from_file(tmp_path);
-                        }
-                        else {
-                            map_file_size = size_from_file(tmp_path);
-                        }
-                    }
-                    auto end = std::chrono::steady_clock::now();
-
-                    // Benchmark
-                    if(do_benchmark) {
-                        console_output("Decompressed %s in %zu ms", map_name, std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
-                    }
-
-                    // If we're not doing maps in RAM, change the path to the tmp file, increment loaded maps by 1
-                    if(!do_maps_in_ram) {
-                        //std::printf("Okay then!\n");
-                        new_path = tmp_path;
-                        last_loaded_map = new_index;
-                        if(last_loaded_map > sizeof(compressed_maps) / sizeof(*compressed_maps)) {
-                            last_loaded_map = 0;
-                        }
-                        compressed_map_to_use.date_modified = mtime;
-                        std::strncpy(compressed_map_to_use.map_name, map_name, sizeof(compressed_map_to_use.map_name));
-                    }
+                if (compressed) {
+                    std::fprintf(stderr, "Compressed map aren't supported boi, no crap anymore.\n");
+                    exit(1);
                 }
                 else if(do_maps_in_ram) {
                     std::size_t offset;
@@ -878,7 +763,6 @@ namespace Chimera {
         return 0;
     }
 
-    static std::unique_ptr<HACMapDownloader> map_downloader;
     static char download_temp_file[MAX_PATH];
 
     static char connect_command[256];
@@ -890,179 +774,7 @@ namespace Chimera {
 
     static GenericFont font_to_use = GenericFont::FONT_SMALL;
     static bool retail_fallback = false;
-    extern "C" int on_map_load_multiplayer(const char *map) noexcept;
-
-    static void download_frame() {
-        char output[128] = {};
-
-        std::int16_t x = -320 + 20;
-        std::int16_t width = ((640 / 2) - (640 / 2 + x)) * 2;
-        std::int16_t y = 210;
-        std::int16_t height = 240 - y;
-
-        ColorARGB color { 1.0F, 1.0F, 1.0F, 1.0F };
-
-        if(server_type() == SERVER_NONE) {
-            map_downloader->cancel();
-        }
-
-        switch(map_downloader->get_status()) {
-            case HACMapDownloader::DownloadStage::DOWNLOAD_STAGE_NOT_STARTED:
-            case HACMapDownloader::DownloadStage::DOWNLOAD_STAGE_STARTING:
-                std::snprintf(output, sizeof(output), "Connecting to repo...");
-                break;
-            case HACMapDownloader::DOWNLOAD_STAGE_DOWNLOADING: {
-                auto dlnow = map_downloader->get_downloaded_size();
-                auto dltotal = map_downloader->get_total_size();
-
-                // Draw the progress
-                apply_text("Transferred:", x, y, 100, height, color, font_to_use, FontAlignment::ALIGN_LEFT, TextAnchor::ANCHOR_CENTER);
-                char progress_buffer[80];
-                std::snprintf(progress_buffer, sizeof(progress_buffer), "%.02f ", dlnow / 1024.0F / 1024.0F);
-                apply_text(std::string(progress_buffer), x + 100, y, 100, height, color, font_to_use, FontAlignment::ALIGN_RIGHT, TextAnchor::ANCHOR_CENTER);
-
-                std::snprintf(progress_buffer, sizeof(progress_buffer), "/ %.02f MiB", dltotal / 1024.0F / 1024.0F);
-                apply_text(std::string(progress_buffer), x + 200, y, 150, height, color, font_to_use, FontAlignment::ALIGN_LEFT, TextAnchor::ANCHOR_CENTER);
-
-                std::snprintf(progress_buffer, sizeof(progress_buffer), "%0.02f %%", 100.0F * dlnow / dltotal);
-                apply_text(std::string(progress_buffer), x + 350, y, 100, height, color, font_to_use, FontAlignment::ALIGN_RIGHT, TextAnchor::ANCHOR_CENTER);
-
-                char download_speed_buffer[64];
-                auto download_speed = map_downloader->get_download_speed();
-                if(download_speed > 1000) {
-                    std::snprintf(download_speed_buffer, sizeof(download_speed_buffer), "%.01f MB/s", download_speed / 1000.0F);
-                }
-                else {
-                    std::snprintf(download_speed_buffer, sizeof(download_speed_buffer), "%zu kB/s", download_speed);
-                }
-                apply_text(download_speed_buffer, x + 450, y, 150, height, color, font_to_use, FontAlignment::ALIGN_RIGHT, TextAnchor::ANCHOR_CENTER);
-
-                break;
-            }
-            case HACMapDownloader::DownloadStage::DOWNLOAD_STAGE_COMPLETE: {
-                std::snprintf(output, sizeof(output), "Reconnecting...");
-                console_output("Download complete. Reconnecting...");
-
-                char to_path[MAX_PATH];
-                std::snprintf(to_path, sizeof(to_path), "%s\\maps\\%s.map", get_chimera().get_path(), map_downloader->get_map().c_str());
-
-                std::filesystem::rename(download_temp_file, to_path);
-
-                reload_map_list();
-
-                auto &latest_connection = get_latest_connection();
-                std::snprintf(connect_command, sizeof(connect_command), "connect \"%s:%u\" \"%s\"", latest_connection.address, latest_connection.port, latest_connection.password);
-                execute_script(connect_command);
-
-                add_preframe_event(initiate_connection);
-                break;
-            }
-            case HACMapDownloader::DownloadStage::DOWNLOAD_STAGE_CANCELING:
-                std::snprintf(output, sizeof(output), "Canceling download...");
-                break;
-            case HACMapDownloader::DownloadStage::DOWNLOAD_STAGE_CANCELED:
-                std::snprintf(output, sizeof(output), "Download canceled!");
-                break;
-            default: {
-                if(retail_fallback || !custom_edition_maps_supported_on_retail()) {
-                    std::snprintf(output, sizeof(output), "Download failed!");
-                    console_output("Download failed!");
-                    retail_fallback = false;
-                    std::snprintf(connect_command, sizeof(connect_command), "connect \"256.256.256.256\" \"\"");
-                    add_preframe_event(initiate_connection);
-                }
-                else {
-                    std::snprintf(output, sizeof(output), "Retrying on retail Halo PC repo...");
-                    std::string map_name_temp = map_downloader->get_map().c_str();
-                    delete map_downloader.release();
-                    retail_fallback = true;
-                    on_map_load_multiplayer(map_name_temp.c_str());
-                }
-                break;
-            }
-        }
-
-        // Draw the progress text
-        if(*output) {
-            apply_text(output, x, y, width, height, color, font_to_use, FontAlignment::ALIGN_CENTER, TextAnchor::ANCHOR_CENTER);
-        }
-
-        if(!map_downloader || map_downloader->is_finished()) {
-            delete map_downloader.release();
-            remove_preframe_event(download_frame);
-            get_chimera().get_signature("server_join_progress_text_sig").rollback();
-            get_chimera().get_signature("server_join_established_text_sig").rollback();
-            get_chimera().get_signature("esrb_text_sig").rollback();
-            retail_fallback = false;
-        }
-    }
-
-    extern "C" int on_map_load_multiplayer(const char *map) noexcept {
-        std::string name_lowercase_copy = map;
-        latest_map_loaded_multiplayer = map;
-        for(char &c : name_lowercase_copy) {
-            c = std::tolower(c);
-        }
-
-        if(path_for_map(map) || std::strcmp(map, SOUNDS_CUSTOM_MAP_NAME) == 0 || std::strcmp(map, BITMAPS_CUSTOM_MAP_NAME) == 0 || std::strcmp(map, LOC_CUSTOM_MAP_NAME) == 0 || std::strcmp(map, "sounds") == 0 || std::strcmp(map, "bitmaps") == 0 || std::strcmp(map, "loc") == 0) {
-            return 0;
-        }
-
-        // Determine what we're downloading from
-        const char *game_engine_str;
-        switch(game_engine()) {
-            case GameEngine::GAME_ENGINE_CUSTOM_EDITION:
-                game_engine_str = "halom";
-                break;
-            case GameEngine::GAME_ENGINE_RETAIL:
-                game_engine_str = (custom_edition_maps_supported_on_retail() && !retail_fallback) ? "halom" : "halor";
-                break;
-            case GameEngine::GAME_ENGINE_DEMO:
-                game_engine_str = "halod";
-                break;
-            default:
-                game_engine_str = nullptr;
-                return 1;
-        }
-
-        // Can we even do this?
-        if(game_engine_str && std::strcmp(game_engine_str, "halor") == 0 && !allow_retail_maps) {
-            console_error(localize("chimera_error_cannot_download_retail_maps_1"));
-            console_error(localize("chimera_error_cannot_download_retail_maps_2"));
-            std::snprintf(connect_command, sizeof(connect_command), "connect \"256.256.256.256\" \"\"");
-            add_preframe_event(initiate_connection);
-            return 1;
-        }
-
-        // Change the server status text
-        static Hook hook1, hook2;
-        char text_string8[sizeof(download_text_string) / sizeof(*download_text_string)] = {};
-        std::snprintf(text_string8, sizeof(text_string8), "Downloading %s.map...", map);
-        std::copy(text_string8, text_string8 + sizeof(text_string8), download_text_string);
-
-        auto &server_join_progress_text_sig = get_chimera().get_signature("server_join_progress_text_sig");
-        write_jmp_call(server_join_progress_text_sig.data() + 10, hook1, reinterpret_cast<const void *>(on_server_join_text_asm), nullptr, false);
-
-        auto &server_join_established_text_sig = get_chimera().get_signature("server_join_established_text_sig");
-        write_jmp_call(server_join_established_text_sig.data() + 5, hook2, reinterpret_cast<const void *>(on_server_join_text_asm), nullptr, false);
-
-        auto &esrb_text_sig = get_chimera().get_signature("esrb_text_sig");
-        overwrite(esrb_text_sig.data() + 5, static_cast<std::int16_t>(0x7FFF));
-        overwrite(esrb_text_sig.data() + 5 + 7, static_cast<std::int16_t>(0x7FFF));
-
-        // Start downloading (determine where to download to and start!)
-        char path[MAX_PATH];
-        std::snprintf(path, sizeof(path), "%s\\download.map", get_chimera().get_path());
-        map_downloader = std::make_unique<HACMapDownloader>(name_lowercase_copy.c_str(), path, game_engine_str);
-        map_downloader->set_preferred_server_node(get_chimera().get_ini()->get_value_long("memory.download_preferred_node"));
-        map_downloader->dispatch();
-
-        // Add callbacks so we can check every frame the status
-        std::snprintf(download_temp_file, sizeof(download_temp_file), "%s\\download.map", get_chimera().get_path());
-        add_preframe_event(download_frame);
-        return 1;
-    }
-
+   
     void set_up_map_loading() {
         // Get settings
         auto is_enabled = [](const char *what) -> bool {
@@ -1125,12 +837,6 @@ namespace Chimera {
         static Hook read_cache_file_data_hook;
         auto &read_map_file_data_sig = get_chimera().get_signature("read_map_file_data_sig");
         write_jmp_call(read_map_file_data_sig.data(), read_cache_file_data_hook, reinterpret_cast<const void *>(on_read_map_file_data_asm), nullptr);
-
-        // Now do map downloading
-        static Hook map_load_multiplayer_hook;
-        auto &map_load_multiplayer_sig = get_chimera().get_signature("map_load_multiplayer_sig");
-        write_jmp_call(map_load_multiplayer_sig.data(), map_load_multiplayer_hook, reinterpret_cast<const void *>(on_map_load_multiplayer_asm));
-        on_map_load_multiplayer_fail = map_load_multiplayer_sig.data() + 0x5;
 
         // Make the meme go away
         if(game_engine() != GameEngine::GAME_ENGINE_CUSTOM_EDITION) {

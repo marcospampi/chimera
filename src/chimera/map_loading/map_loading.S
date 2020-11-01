@@ -44,21 +44,6 @@ _on_read_map_file_data_asm:
     on_read_map_file_data_asm_end:
     ret
 
-.globl _on_map_load_multiplayer_asm
-_on_map_load_multiplayer_asm:
-    mov eax, dword ptr [esp+0x28]
-    lea eax, [eax+0x14]
-    push eax
-    call _on_map_load_multiplayer
-    add esp, 4
-    cmp eax, 0
-    je on_map_load_multiplayer_asm_end
-    add esp, 4
-    popad
-    popfd
-    push [_on_map_load_multiplayer_fail]
-    on_map_load_multiplayer_asm_end:
-    ret
 
 .globl _on_server_join_text_asm
 _on_server_join_text_asm:
