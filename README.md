@@ -7,7 +7,8 @@ for more information.
 
 The official repository is hosted at https://github.com/SnowyMouse/chimera
 
-
+This repository DOES NOT support both compressed map or hac downloader,
+and will never.
 
 
 
@@ -97,7 +98,6 @@ These are features that are always (or are on).
 - [Removed update check](#removed-update-check)
 - [Removed Watson](#removed-watson)
 - [Multi-team vehicle fix](#multi-team-vehicle-fix)
-- [Map downloading](#map-downloading)
 
 #### Interpolation
 The game has an issue where object movement is tied to tick rate, thus objects
@@ -262,11 +262,6 @@ Servers with Chimera's [chimera_allow_all_passengers](#allow-all-passengers),
 multi-team vehicles, or some equivalent feature enabled will not desync a client
 with this fix.
 
-#### Map downloading
-Chimera will automatically attempt to download maps off of the
-[HAC2 Map repo](http://maps.halonet.net/maplist.php) upon joining a server that
-is playing a map you don't have. These maps are stored under `chimera/maps` in
-your Halo profiles folder.
 
 ### Ini features
 Chimera has a very customizable chimera.ini text file that you can use to
