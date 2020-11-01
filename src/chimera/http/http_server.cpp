@@ -44,8 +44,9 @@ namespace Chimera
               out_s << ",";
           }
         }
-        out_s << "]}";
       }
+      out_s << "]}";
+      
       res.set_content(out_s.str(), "application/json");
 
     });
