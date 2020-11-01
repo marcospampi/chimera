@@ -68,6 +68,7 @@
 #include "fix/weapon_swap_ticks.hpp"
 #include "halo_data/game_engine.hpp"
 #include "halo_data/main_menu_music.hpp"
+#include "http/http_server.hpp"
 #include "miscellaneous/controller.hpp"
 #include "halo_data/port.hpp"
 #include "command/hotkey.hpp"
@@ -131,6 +132,10 @@ namespace Chimera {
 
             // Lol
             set_up_invalid_command_crash_fix();
+
+            if(this->feature_present("server")) {
+                set_up_http_server();
+            }
 
             if(this->feature_present("client")) {
                 // Fix the camo by default

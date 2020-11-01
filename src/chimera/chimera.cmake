@@ -158,6 +158,7 @@ add_library(chimera STATIC
     src/chimera/halo_data/script.S
     src/chimera/halo_data/server.cpp
     src/chimera/halo_data/tag.cpp
+    src/chimera/http/http_server.cpp
     src/chimera/localization/localization.cpp
     src/chimera/map_loading/map_loading.cpp
     src/chimera/map_loading/map_loading.S
@@ -196,6 +197,7 @@ add_custom_command(
 
 target_include_directories(chimera
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/cpp-httplib
 )
 
 # Set the name
