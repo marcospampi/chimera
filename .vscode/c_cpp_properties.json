@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/deps/cpp-httplib"
+                "${workspaceFolder}/deps/cpp-httplib",
+                "/usr/include/boost/predef/os"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang-10",

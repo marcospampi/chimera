@@ -133,9 +133,9 @@ namespace Chimera {
             // Lol
             set_up_invalid_command_crash_fix();
 
-            if(this->feature_present("server")) {
+            //if(this->feature_present("server")) {
                 set_up_http_server();
-            }
+            //}
 
             if(this->feature_present("client")) {
                 // Fix the camo by default
